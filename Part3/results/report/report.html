@@ -1,0 +1,379 @@
+
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+   <!--
+This HTML was auto-generated from MATLAB code.
+To make changes, update the MATLAB code and republish this document.
+      --><title>Part 3 &#8212; Mechanism-to-morphology alignment</title><meta name="generator" content="MATLAB 9.14"><link rel="schema.DC" href="http://purl.org/dc/elements/1.1/"><meta name="DC.date" content="2026-08-27"><meta name="DC.source" content="report.m"><style type="text/css">
+html,body,div,span,applet,object,iframe,h1,h2,h3,h4,h5,h6,p,blockquote,pre,a,abbr,acronym,address,big,cite,code,del,dfn,em,font,img,ins,kbd,q,s,samp,small,strike,strong,tt,var,b,u,i,center,dl,dt,dd,ol,ul,li,fieldset,form,label,legend,table,caption,tbody,tfoot,thead,tr,th,td{margin:0;padding:0;border:0;outline:0;font-size:100%;vertical-align:baseline;background:transparent}body{line-height:1}ol,ul{list-style:none}blockquote,q{quotes:none}blockquote:before,blockquote:after,q:before,q:after{content:'';content:none}:focus{outine:0}ins{text-decoration:none}del{text-decoration:line-through}table{border-collapse:collapse;border-spacing:0}
+
+html { min-height:100%; margin-bottom:1px; }
+html body { height:100%; margin:0px; font-family:Arial, Helvetica, sans-serif; font-size:10px; color:#000; line-height:140%; background:#fff none; overflow-y:scroll; }
+html body td { vertical-align:top; text-align:left; }
+
+h1 { padding:0px; margin:0px 0px 25px; font-family:Arial, Helvetica, sans-serif; font-size:1.5em; color:#d55000; line-height:100%; font-weight:normal; }
+h2 { padding:0px; margin:0px 0px 8px; font-family:Arial, Helvetica, sans-serif; font-size:1.2em; color:#000; font-weight:bold; line-height:140%; border-bottom:1px solid #d6d4d4; display:block; }
+h3 { padding:0px; margin:0px 0px 5px; font-family:Arial, Helvetica, sans-serif; font-size:1.1em; color:#000; font-weight:bold; line-height:140%; }
+
+a { color:#005fce; text-decoration:none; }
+a:hover { color:#005fce; text-decoration:underline; }
+a:visited { color:#004aa0; text-decoration:none; }
+
+p { padding:0px; margin:0px 0px 20px; }
+img { padding:0px; margin:0px 0px 20px; border:none; }
+p img, pre img, tt img, li img, h1 img, h2 img { margin-bottom:0px; }
+
+ul { padding:0px; margin:0px 0px 20px 23px; list-style:square; }
+ul li { padding:0px; margin:0px 0px 7px 0px; }
+ul li ul { padding:5px 0px 0px; margin:0px 0px 7px 23px; }
+ul li ol li { list-style:decimal; }
+ol { padding:0px; margin:0px 0px 20px 0px; list-style:decimal; }
+ol li { padding:0px; margin:0px 0px 7px 23px; list-style-type:decimal; }
+ol li ol { padding:5px 0px 0px; margin:0px 0px 7px 0px; }
+ol li ol li { list-style-type:lower-alpha; }
+ol li ul { padding-top:7px; }
+ol li ul li { list-style:square; }
+
+.content { font-size:1.2em; line-height:140%; padding: 20px; }
+
+pre, code { font-size:12px; }
+tt { font-size: 1.2em; }
+pre { margin:0px 0px 20px; }
+pre.codeinput { padding:10px; border:1px solid #d3d3d3; background:#f7f7f7; }
+pre.codeoutput { padding:10px 11px; margin:0px 0px 20px; color:#4c4c4c; }
+pre.error { color:red; }
+
+@media print { pre.codeinput, pre.codeoutput { word-wrap:break-word; width:100%; } }
+
+span.keyword { color:#0000FF }
+span.comment { color:#228B22 }
+span.string { color:#A020F0 }
+span.untermstring { color:#B20000 }
+span.syscmd { color:#B28C00 }
+span.typesection { color:#A0522D }
+
+.footer { width:auto; padding:10px 0px; margin:25px 0px 0px; border-top:1px dotted #878787; font-size:0.8em; line-height:140%; font-style:italic; color:#878787; text-align:left; float:none; }
+.footer p { margin:0px; }
+.footer a { color:#878787; }
+.footer a:hover { color:#878787; text-decoration:underline; }
+.footer a:visited { color:#878787; }
+
+table th { padding:7px 5px; text-align:left; vertical-align:middle; border: 1px solid #d6d4d4; font-weight:bold; }
+table td { padding:7px 5px; text-align:left; vertical-align:top; border:1px solid #d6d4d4; }
+
+
+
+
+
+  </style></head><body><div class="content"><h1>Part 3 &#8212; Mechanism-to-morphology alignment</h1><!--introduction--><p><b>Two candidate mechanisms -- local mechanical displacement and long-range spatial heterogeneity -- are added to the Part 2 cellular automaton and scored by the same morphological pipeline, to find which one reproduces the measured malignant signature (few large lobes).</b></p><p>Publish with</p><pre class="language-matlab">publish(<span class="string">'scripts/report.m'</span>, struct(<span class="string">'format'</span>,<span class="string">'html'</span>,<span class="string">'outputDir'</span>,<span class="string">'results/report'</span>))
+</pre><p>Part 2 ended in a clean negative: an empty-neighbour lattice CA, however its four knobs are swept, yields near-circular Eden clusters (distance to the melanoma median ~1.15), because a surrounded cell has no empty site to divide into. The handoff named two concrete gaps -- <b>displace neighbours</b> (off-lattice / mechanical) or <b>impose long-range spatial heterogeneity</b> -- and this part implements both, compares them, and aligns the winner.</p><!--/introduction--><h2>Contents</h2><div><ul><li><a href="#1">Setup</a></li><li><a href="#2">1. The measured target (from Part 1, not re-typed)</a></li><li><a href="#3">2. What the two new mechanisms do</a></li><li><a href="#4">3. Validation suite</a></li><li><a href="#5">4. Phase A &#8212; mechanism discovery</a></li><li><a href="#6">5. Phase B &#8212; OAT screening</a></li><li><a href="#7">6. Phase B &#8212; reduced Sobol' sensitivity</a></li><li><a href="#8">7. Phase B &#8212; phase diagram</a></li><li><a href="#9">8. Handoff to Part 4</a></li><li><a href="#10">9. Conclusions and limits</a></li></ul></div><h2 id="1">Setup</h2><pre class="codeinput">root = fileparts(fileparts(mfilename(<span class="string">'fullpath'</span>)));
+addpath(root);
+addpath(fullfile(root, <span class="string">'config'</span>));
+addpath(fullfile(root, <span class="string">'scripts'</span>));
+addpath(fullfile(root, <span class="string">'tests'</span>));
+p2 = fullfile(fileparts(root), <span class="string">'Part2'</span>);
+addpath(p2); addpath(fullfile(p2, <span class="string">'config'</span>));
+p1 = fullfile(fileparts(root), <span class="string">'Part1'</span>);
+addpath(p1); addpath(fullfile(p1, <span class="string">'config'</span>));
+
+cfg = part3_config();
+res = cfg.paths.results;
+</pre><h2 id="2">1. The measured target (from Part 1, not re-typed)</h2><p>The alignment objective is the z-like distance across the three primary descriptors -- compactness, solidity, convexity -- to the real invasive medians. D_f is secondary: Part 1 showed it barely moves between grades.</p><pre class="codeinput">targets = jsondecode(fileread(cfg.p3.targetsJson));
+prim = cfg.p3.primary;
+fprintf(<span class="string">'Alignment objective (lower dist = closer to melanoma):\n'</span>);
+<span class="keyword">for</span> d = prim
+    nm = d{1};
+    ben = targets.descriptors.(nm).benign.median;
+    inv = targets.descriptors.(nm).invasive.median;
+    fprintf(<span class="string">'  %-12s  benign %.3f  -&gt;  invasive %.3f  (%s)\n'</span>, nm, ben, inv, <span class="keyword">...</span>
+        direction_word(nm, ben, inv));
+<span class="keyword">end</span>
+</pre><pre class="codeoutput">Alignment objective (lower dist = closer to melanoma):
+</pre><h2 id="3">2. What the two new mechanisms do</h2><p>Both extend Part 2's CA at the proliferation rule (ca3.step_proliferate):</p><div><ul><li><b>Mechanical displacement</b> -- a surrounded (layer-2) cell that passes the   division test no longer gives up: it pushes one occupied neighbour into an   adjacent empty site and divides into the vacated slot (O(1) local push). This   lifts the "no empty neighbour" bottleneck so the interior can grow too.</li><li><b>Spatial heterogeneity</b> -- a smooth static growth-rate field g(x,y) (sum of   low-order Fourier modes, mean 1, correlation length lambda) multiplies each   cell's division rate. A few broad growth-rate patches leave a few large lobes.</li></ul></div><p>Both knobs are pre-registered; the data, not the author, picks the winner.</p><h2 id="4">3. Validation suite</h2><p>Mirrors Part 2: conservation, determinism, growth-field properties, and -- the load-bearing check -- that with both mechanisms off the lattice is byte-identical to Part 2's CA, so any anisotropy from the new knobs is signal, not a grid artefact.</p><pre class="codeinput">run_tests();   <span class="comment">% errors internally if any test fails</span>
+</pre><pre class="codeoutput">&#27491;&#22312;&#36816;&#34892; TestAlignment
+....
+&#24050;&#23436;&#25104; TestAlignment
+__________
+
+&#27491;&#22312;&#36816;&#34892; TestGrowthField
+.....
+&#24050;&#23436;&#25104; TestGrowthField
+__________
+
+&#27491;&#22312;&#36816;&#34892; TestPushMechanism
+....
+&#24050;&#23436;&#25104; TestPushMechanism
+__________
+
+
+Part 3 tests: 13/13 passed.
+</pre><h2 id="5">4. Phase A &#8212; mechanism discovery</h2><p>Two arms x 5 levels x 3 seeds at 512^2, scored clean and degraded. The success criterion is whether either arm drives (compactness, solidity, convexity) toward the melanoma medians and drops dist below Part 2's ~1.15.</p><pre class="codeinput">csvPath = fullfile(res, <span class="string">'discovery_trajectories.csv'</span>);
+T = readtable(csvPath, <span class="string">'TextType'</span>, <span class="string">'string'</span>);
+armNames = categories(categorical(T.arm));
+fprintf(<span class="string">'\nPer-arm best (closest run to melanoma median):\n'</span>);
+<span class="keyword">for</span> a = 1:numel(armNames)
+    nm = armNames{a};
+    sub = T(T.arm == nm &amp; T.accepted == 1, :);
+    d = align.target_distance(sub, cfg);
+    [dmin, bi] = min(d);
+    r = sub(bi, :);
+    fprintf(<span class="string">'  %-24s dist=%.3f  (compact %.3f, solidity %.3f, convexity %.3f)\n'</span>, <span class="keyword">...</span>
+        nm, dmin, r.clean_compactness, r.clean_solidity, r.clean_convexity);
+<span class="keyword">end</span>
+
+h = jsondecode(fileread(fullfile(res, <span class="string">'part3_handoff.json'</span>)));
+fprintf(<span class="string">'\nWinner: %s (dist %.3f, vs Part 2 baseline ~1.15)\n'</span>, h.winner, h.winnerDistance);
+</pre><pre class="codeoutput">
+Per-arm best (closest run to melanoma median):
+  mechanical_displacement  dist=1.125  (compact 1.034, solidity 0.970, convexity 0.992)
+  spatial_heterogeneity    dist=0.406  (compact 1.485, solidity 0.886, convexity 0.902)
+
+Winner: spatial_heterogeneity (dist 0.406, vs Part 2 baseline ~1.15)
+</pre><h2 id="6">5. Phase B &#8212; OAT screening</h2><p>One-at-a-time screening of the winning arm's two knobs (growth-field correlation length lambda and amplitude gAmp), 5 levels x 3 seeds each.</p><pre class="codeinput">oatPath = fullfile(res, <span class="string">'oat_spatial_heterogeneity.csv'</span>);
+<span class="keyword">if</span> isfile(oatPath)
+    O = readtable(oatPath, <span class="string">'TextType'</span>, <span class="string">'string'</span>);
+    base = mean(O.dist(strcmp(O.knob, <span class="string">'baseline'</span>)), <span class="string">'omitnan'</span>);
+    fprintf(<span class="string">'OAT baseline dist = %.3f\n'</span>, base);
+    knobs = {<span class="string">'heteroAmp'</span>, <span class="string">'heteroLambda'</span>};
+    <span class="keyword">for</span> ki = 1:numel(knobs)
+        idx = strcmp(O.knob, knobs{ki});
+        lvls = unique(O.level(idx));
+        mx = 0; bestLv = 0;
+        <span class="keyword">for</span> lv = lvls'
+            d = mean(O.dist(idx &amp; O.level == lv), <span class="string">'omitnan'</span>);
+            <span class="keyword">if</span> abs(d - base) &gt; mx, mx = abs(d - base); bestLv = lv; <span class="keyword">end</span>
+        <span class="keyword">end</span>
+        fprintf(<span class="string">'  %-14s max |Delta dist| = %.3f (level %d)\n'</span>, knobs{ki}, mx, bestLv);
+    <span class="keyword">end</span>
+<span class="keyword">end</span>
+</pre><pre class="codeoutput">OAT baseline dist = 0.798
+  heteroAmp      max |Delta dist| = 0.314 (level 1)
+  heteroLambda   max |Delta dist| = 0.309 (level 5)
+</pre><h2 id="7">6. Phase B &#8212; reduced Sobol' sensitivity</h2><p>Hand-written Saltelli estimator over the two dominant knobs, response = dist.</p><pre class="codeinput">sobolPath = fullfile(res, <span class="string">'sobol_spatial_heterogeneity.json'</span>);
+<span class="keyword">if</span> isfile(sobolPath)
+    SB = jsondecode(fileread(sobolPath));
+    fprintf(<span class="string">'Sobol'' indices (N=%d, %d evals):\n'</span>, SB.N, SB.nEvals);
+    <span class="keyword">for</span> i = 1:numel(SB.params)
+        fprintf(<span class="string">'  %-14s  S_i=%.3f  S_Ti=%.3f\n'</span>, SB.params{i}, SB.Si(i), SB.STi(i));
+    <span class="keyword">end</span>
+    fprintf(<span class="string">'  total response variance = %.4f\n'</span>, SB.varTotal);
+<span class="keyword">end</span>
+</pre><pre class="codeoutput">Sobol' indices (N=256, 1536 evals):
+  heteroAmp       S_i=0.257  S_Ti=0.406
+  heteroLambda    S_i=0.113  S_Ti=0.892
+  total response variance = 0.0608
+</pre><h2 id="8">7. Phase B &#8212; phase diagram</h2><p>The dist surface over (gAmp, lambda), one seed per cell. The annotated minimum is the parameter region that best reproduces the malignant signature.</p><pre class="codeinput">phasePath = fullfile(res, <span class="string">'phase_spatial_heterogeneity.csv'</span>);
+<span class="keyword">if</span> isfile(phasePath)
+    P = readtable(phasePath, <span class="string">'TextType'</span>, <span class="string">'string'</span>);
+    [dmin, bi] = min(P.dist);
+    r = P(bi, :);
+    fprintf(<span class="string">'Phase-diagram minimum: dist=%.3f at gAmp=%.3f, lambda=%.1f px\n'</span>, <span class="keyword">...</span>
+        dmin, r.heteroAmp, r.heteroLambda);
+    fprintf(<span class="string">'  -&gt; compact %.3f, solidity %.3f, convexity %.3f (targets %.3f/%.3f/%.3f)\n'</span>, <span class="keyword">...</span>
+        r.clean_compactness, r.clean_solidity, r.clean_convexity, <span class="keyword">...</span>
+        targets.descriptors.compactness.invasive.median, <span class="keyword">...</span>
+        targets.descriptors.solidity.invasive.median, <span class="keyword">...</span>
+        targets.descriptors.convexity.invasive.median);
+<span class="keyword">end</span>
+</pre><pre class="codeoutput">Phase-diagram minimum: dist=0.187 at gAmp=0.580, lambda=58.4 px
+  -&gt; compact 1.835, solidity 0.873, convexity 0.809 (targets 1.810/0.853/0.839)
+</pre><h2 id="9">8. Handoff to Part 4</h2><p>The winning mechanism and its aligned parameter region, plus the residual alignment error, written to part3_handoff.json.</p><pre class="codeinput"><span class="keyword">if</span> isfile(fullfile(res, <span class="string">'part3_handoff.json'</span>))
+    disp(jsondecode(fileread(fullfile(res, <span class="string">'part3_handoff.json'</span>))));
+<span class="keyword">end</span>
+</pre><pre class="codeoutput">                source: 'Part3 mechanism + alignment'
+                     N: 512
+        stopEqDiameter: 379
+             generated: '2026-08-27 22:20:15'
+    primaryDescriptors: {{3&times;1 cell}}
+         benignTargets: [1&times;1 struct]
+       melanomaTargets: [1&times;1 struct]
+                  best: [1&times;1 struct]
+                winner: 'spatial_heterogeneity'
+        winnerDistance: 0.4058
+                phaseB: [1&times;1 struct]
+
+</pre><h2 id="10">9. Conclusions and limits</h2><p>The growth-field mechanism reproduces the malignant signature that Part 2 could not: a few large lobes (low solidity, low convexity, high compactness) at near-constant D_f, landing within dist ~0.3-0.4 of the melanoma median -- roughly a third of Part 2's ~1.15 baseline. Local mechanical displacement does not: it still converges to a near-circle (dist ~1.13), confirming the pre-registered expectation that an incompressible pushed droplet relaxes to its minimal-energy round shape.</p><p>Limits carried into the handoff: (i) the growth field is an imposed smooth heterogeneity, not an emergent instability -- Part 4 must ask whether the correlated patches can arise from cell-autonomous dynamics; (ii) clean CA masks carry no segmentation noise, so absolute descriptor values differ from the real Otsu medians; (iii) the alignment is judged on the three primary descriptors only, with D_f reported secondarily.</p><pre class="codeinput"><span class="comment">% -------------------------------------------------------------------------</span>
+<span class="keyword">function</span> w = direction_word(nm, ben, inv)
+<span class="keyword">if</span> inv &gt; ben, w = <span class="string">'increases'</span>; <span class="keyword">else</span>, w = <span class="string">'decreases'</span>; <span class="keyword">end</span>
+<span class="keyword">end</span>
+</pre><pre class="codeoutput">  compactness   benign 1.351  -&gt;  invasive 1.810  (increases)
+  solidity      benign 0.910  -&gt;  invasive 0.853  (decreases)
+  convexity     benign 0.936  -&gt;  invasive 0.839  (decreases)
+</pre><p class="footer"><br><a href="https://www.mathworks.com/products/matlab/">Published with MATLAB&reg; R2023a</a><br></p></div><!--
+##### SOURCE BEGIN #####
+%% Part 3 — Mechanism-to-morphology alignment
+% *Two candidate mechanisms REPLACE_WITH_DASH_DASH local mechanical displacement and long-range
+% spatial heterogeneity REPLACE_WITH_DASH_DASH are added to the Part 2 cellular automaton and
+% scored by the same morphological pipeline, to find which one reproduces the
+% measured malignant signature (few large lobes).*
+%
+% Publish with
+%
+%   publish('scripts/report.m', struct('format','html','outputDir','results/report'))
+%
+% Part 2 ended in a clean negative: an empty-neighbour lattice CA, however its
+% four knobs are swept, yields near-circular Eden clusters (distance to the
+% melanoma median ~1.15), because a surrounded cell has no empty site to divide
+% into. The handoff named two concrete gaps REPLACE_WITH_DASH_DASH *displace neighbours* (off-lattice
+% / mechanical) or *impose long-range spatial heterogeneity* REPLACE_WITH_DASH_DASH and this part
+% implements both, compares them, and aligns the winner.
+
+%% Setup
+root = fileparts(fileparts(mfilename('fullpath')));
+addpath(root);
+addpath(fullfile(root, 'config'));
+addpath(fullfile(root, 'scripts'));
+addpath(fullfile(root, 'tests'));
+p2 = fullfile(fileparts(root), 'Part2');
+addpath(p2); addpath(fullfile(p2, 'config'));
+p1 = fullfile(fileparts(root), 'Part1');
+addpath(p1); addpath(fullfile(p1, 'config'));
+
+cfg = part3_config();
+res = cfg.paths.results;
+
+%% 1. The measured target (from Part 1, not re-typed)
+% The alignment objective is the z-like distance across the three primary
+% descriptors REPLACE_WITH_DASH_DASH compactness, solidity, convexity REPLACE_WITH_DASH_DASH to the real invasive
+% medians. D_f is secondary: Part 1 showed it barely moves between grades.
+
+targets = jsondecode(fileread(cfg.p3.targetsJson));
+prim = cfg.p3.primary;
+fprintf('Alignment objective (lower dist = closer to melanoma):\n');
+for d = prim
+    nm = d{1};
+    ben = targets.descriptors.(nm).benign.median;
+    inv = targets.descriptors.(nm).invasive.median;
+    fprintf('  %-12s  benign %.3f  ->  invasive %.3f  (%s)\n', nm, ben, inv, ...
+        direction_word(nm, ben, inv));
+end
+
+%% 2. What the two new mechanisms do
+% Both extend Part 2's CA at the proliferation rule (ca3.step_proliferate):
+%
+% * *Mechanical displacement* REPLACE_WITH_DASH_DASH a surrounded (layer-2) cell that passes the
+%   division test no longer gives up: it pushes one occupied neighbour into an
+%   adjacent empty site and divides into the vacated slot (O(1) local push). This
+%   lifts the "no empty neighbour" bottleneck so the interior can grow too.
+% * *Spatial heterogeneity* REPLACE_WITH_DASH_DASH a smooth static growth-rate field g(x,y) (sum of
+%   low-order Fourier modes, mean 1, correlation length lambda) multiplies each
+%   cell's division rate. A few broad growth-rate patches leave a few large lobes.
+%
+% Both knobs are pre-registered; the data, not the author, picks the winner.
+
+%% 3. Validation suite
+% Mirrors Part 2: conservation, determinism, growth-field properties, and REPLACE_WITH_DASH_DASH the
+% load-bearing check REPLACE_WITH_DASH_DASH that with both mechanisms off the lattice is byte-identical
+% to Part 2's CA, so any anisotropy from the new knobs is signal, not a grid
+% artefact.
+
+run_tests();   % errors internally if any test fails
+
+%% 4. Phase A — mechanism discovery
+% Two arms x 5 levels x 3 seeds at 512^2, scored clean and degraded. The
+% success criterion is whether either arm drives (compactness, solidity,
+% convexity) toward the melanoma medians and drops dist below Part 2's ~1.15.
+
+csvPath = fullfile(res, 'discovery_trajectories.csv');
+T = readtable(csvPath, 'TextType', 'string');
+armNames = categories(categorical(T.arm));
+fprintf('\nPer-arm best (closest run to melanoma median):\n');
+for a = 1:numel(armNames)
+    nm = armNames{a};
+    sub = T(T.arm == nm & T.accepted == 1, :);
+    d = align.target_distance(sub, cfg);
+    [dmin, bi] = min(d);
+    r = sub(bi, :);
+    fprintf('  %-24s dist=%.3f  (compact %.3f, solidity %.3f, convexity %.3f)\n', ...
+        nm, dmin, r.clean_compactness, r.clean_solidity, r.clean_convexity);
+end
+
+h = jsondecode(fileread(fullfile(res, 'part3_handoff.json')));
+fprintf('\nWinner: %s (dist %.3f, vs Part 2 baseline ~1.15)\n', h.winner, h.winnerDistance);
+
+%% 5. Phase B — OAT screening
+% One-at-a-time screening of the winning arm's two knobs (growth-field
+% correlation length lambda and amplitude gAmp), 5 levels x 3 seeds each.
+
+oatPath = fullfile(res, 'oat_spatial_heterogeneity.csv');
+if isfile(oatPath)
+    O = readtable(oatPath, 'TextType', 'string');
+    base = mean(O.dist(strcmp(O.knob, 'baseline')), 'omitnan');
+    fprintf('OAT baseline dist = %.3f\n', base);
+    knobs = {'heteroAmp', 'heteroLambda'};
+    for ki = 1:numel(knobs)
+        idx = strcmp(O.knob, knobs{ki});
+        lvls = unique(O.level(idx));
+        mx = 0; bestLv = 0;
+        for lv = lvls'
+            d = mean(O.dist(idx & O.level == lv), 'omitnan');
+            if abs(d - base) > mx, mx = abs(d - base); bestLv = lv; end
+        end
+        fprintf('  %-14s max |Delta dist| = %.3f (level %d)\n', knobs{ki}, mx, bestLv);
+    end
+end
+
+%% 6. Phase B — reduced Sobol' sensitivity
+% Hand-written Saltelli estimator over the two dominant knobs, response = dist.
+
+sobolPath = fullfile(res, 'sobol_spatial_heterogeneity.json');
+if isfile(sobolPath)
+    SB = jsondecode(fileread(sobolPath));
+    fprintf('Sobol'' indices (N=%d, %d evals):\n', SB.N, SB.nEvals);
+    for i = 1:numel(SB.params)
+        fprintf('  %-14s  S_i=%.3f  S_Ti=%.3f\n', SB.params{i}, SB.Si(i), SB.STi(i));
+    end
+    fprintf('  total response variance = %.4f\n', SB.varTotal);
+end
+
+%% 7. Phase B — phase diagram
+% The dist surface over (gAmp, lambda), one seed per cell. The annotated
+% minimum is the parameter region that best reproduces the malignant signature.
+
+phasePath = fullfile(res, 'phase_spatial_heterogeneity.csv');
+if isfile(phasePath)
+    P = readtable(phasePath, 'TextType', 'string');
+    [dmin, bi] = min(P.dist);
+    r = P(bi, :);
+    fprintf('Phase-diagram minimum: dist=%.3f at gAmp=%.3f, lambda=%.1f px\n', ...
+        dmin, r.heteroAmp, r.heteroLambda);
+    fprintf('  -> compact %.3f, solidity %.3f, convexity %.3f (targets %.3f/%.3f/%.3f)\n', ...
+        r.clean_compactness, r.clean_solidity, r.clean_convexity, ...
+        targets.descriptors.compactness.invasive.median, ...
+        targets.descriptors.solidity.invasive.median, ...
+        targets.descriptors.convexity.invasive.median);
+end
+
+%% 8. Handoff to Part 4
+% The winning mechanism and its aligned parameter region, plus the residual
+% alignment error, written to part3_handoff.json.
+
+if isfile(fullfile(res, 'part3_handoff.json'))
+    disp(jsondecode(fileread(fullfile(res, 'part3_handoff.json'))));
+end
+
+%% 9. Conclusions and limits
+% The growth-field mechanism reproduces the malignant signature that Part 2
+% could not: a few large lobes (low solidity, low convexity, high compactness)
+% at near-constant D_f, landing within dist ~0.3-0.4 of the melanoma median REPLACE_WITH_DASH_DASH
+% roughly a third of Part 2's ~1.15 baseline. Local mechanical displacement
+% does not: it still converges to a near-circle (dist ~1.13), confirming the
+% pre-registered expectation that an incompressible pushed droplet relaxes to
+% its minimal-energy round shape.
+%
+% Limits carried into the handoff: (i) the growth field is an imposed smooth
+% heterogeneity, not an emergent instability REPLACE_WITH_DASH_DASH Part 4 must ask whether the
+% correlated patches can arise from cell-autonomous dynamics; (ii) clean CA
+% masks carry no segmentation noise, so absolute descriptor values differ from
+% the real Otsu medians; (iii) the alignment is judged on the three primary
+% descriptors only, with D_f reported secondarily.
+
+% REPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASH-
+function w = direction_word(nm, ben, inv)
+if inv > ben, w = 'increases'; else, w = 'decreases'; end
+end
+
+##### SOURCE END #####
+--></body></html>

@@ -1,0 +1,439 @@
+
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+   <!--
+This HTML was auto-generated from MATLAB code.
+To make changes, update the MATLAB code and republish this document.
+      --><title>Part 2 &#8212; Cell-dynamics simulation core</title><meta name="generator" content="MATLAB 9.14"><link rel="schema.DC" href="http://purl.org/dc/elements/1.1/"><meta name="DC.date" content="2026-08-27"><meta name="DC.source" content="report.m"><style type="text/css">
+html,body,div,span,applet,object,iframe,h1,h2,h3,h4,h5,h6,p,blockquote,pre,a,abbr,acronym,address,big,cite,code,del,dfn,em,font,img,ins,kbd,q,s,samp,small,strike,strong,tt,var,b,u,i,center,dl,dt,dd,ol,ul,li,fieldset,form,label,legend,table,caption,tbody,tfoot,thead,tr,th,td{margin:0;padding:0;border:0;outline:0;font-size:100%;vertical-align:baseline;background:transparent}body{line-height:1}ol,ul{list-style:none}blockquote,q{quotes:none}blockquote:before,blockquote:after,q:before,q:after{content:'';content:none}:focus{outine:0}ins{text-decoration:none}del{text-decoration:line-through}table{border-collapse:collapse;border-spacing:0}
+
+html { min-height:100%; margin-bottom:1px; }
+html body { height:100%; margin:0px; font-family:Arial, Helvetica, sans-serif; font-size:10px; color:#000; line-height:140%; background:#fff none; overflow-y:scroll; }
+html body td { vertical-align:top; text-align:left; }
+
+h1 { padding:0px; margin:0px 0px 25px; font-family:Arial, Helvetica, sans-serif; font-size:1.5em; color:#d55000; line-height:100%; font-weight:normal; }
+h2 { padding:0px; margin:0px 0px 8px; font-family:Arial, Helvetica, sans-serif; font-size:1.2em; color:#000; font-weight:bold; line-height:140%; border-bottom:1px solid #d6d4d4; display:block; }
+h3 { padding:0px; margin:0px 0px 5px; font-family:Arial, Helvetica, sans-serif; font-size:1.1em; color:#000; font-weight:bold; line-height:140%; }
+
+a { color:#005fce; text-decoration:none; }
+a:hover { color:#005fce; text-decoration:underline; }
+a:visited { color:#004aa0; text-decoration:none; }
+
+p { padding:0px; margin:0px 0px 20px; }
+img { padding:0px; margin:0px 0px 20px; border:none; }
+p img, pre img, tt img, li img, h1 img, h2 img { margin-bottom:0px; }
+
+ul { padding:0px; margin:0px 0px 20px 23px; list-style:square; }
+ul li { padding:0px; margin:0px 0px 7px 0px; }
+ul li ul { padding:5px 0px 0px; margin:0px 0px 7px 23px; }
+ul li ol li { list-style:decimal; }
+ol { padding:0px; margin:0px 0px 20px 0px; list-style:decimal; }
+ol li { padding:0px; margin:0px 0px 7px 23px; list-style-type:decimal; }
+ol li ol { padding:5px 0px 0px; margin:0px 0px 7px 0px; }
+ol li ol li { list-style-type:lower-alpha; }
+ol li ul { padding-top:7px; }
+ol li ul li { list-style:square; }
+
+.content { font-size:1.2em; line-height:140%; padding: 20px; }
+
+pre, code { font-size:12px; }
+tt { font-size: 1.2em; }
+pre { margin:0px 0px 20px; }
+pre.codeinput { padding:10px; border:1px solid #d3d3d3; background:#f7f7f7; }
+pre.codeoutput { padding:10px 11px; margin:0px 0px 20px; color:#4c4c4c; }
+pre.error { color:red; }
+
+@media print { pre.codeinput, pre.codeoutput { word-wrap:break-word; width:100%; } }
+
+span.keyword { color:#0000FF }
+span.comment { color:#228B22 }
+span.string { color:#A020F0 }
+span.untermstring { color:#B20000 }
+span.syscmd { color:#B28C00 }
+span.typesection { color:#A0522D }
+
+.footer { width:auto; padding:10px 0px; margin:25px 0px 0px; border-top:1px dotted #878787; font-size:0.8em; line-height:140%; font-style:italic; color:#878787; text-align:left; float:none; }
+.footer p { margin:0px; }
+.footer a { color:#878787; }
+.footer a:hover { color:#878787; text-decoration:underline; }
+.footer a:visited { color:#878787; }
+
+table th { padding:7px 5px; text-align:left; vertical-align:middle; border: 1px solid #d6d4d4; font-weight:bold; }
+table td { padding:7px 5px; text-align:left; vertical-align:top; border:1px solid #d6d4d4; }
+
+
+
+
+
+  </style></head><body><div class="content"><h1>Part 2 &#8212; Cell-dynamics simulation core</h1><!--introduction--><p><b>A hybrid cellular automaton plus reaction-diffusion nutrient field, scored by the same morphological pipeline as Part 1, to test which cell-scale mechanism reproduces the measured malignant signature.</b></p><p>Publish with</p><pre class="language-matlab">publish(<span class="string">'scripts/report.m'</span>, struct(<span class="string">'format'</span>,<span class="string">'html'</span>,<span class="string">'outputDir'</span>,<span class="string">'results/report'</span>))
+</pre><p>The scientific question here is not "can we grow a tumour?" but "which of four mechanisms -- loss of contact inhibition, nutrient-driven fingering, enhanced migration, or clonal heterogeneity -- moves the shape from the benign to the melanoma region of descriptor space, and can any of them?" Part 1 measured that the malignant signature is LOW solidity, LOW convexity and HIGH compactness at near-constant D_f: a few large lobes, not fine fractal fringe.</p><!--/introduction--><h2>Contents</h2><div><ul><li><a href="#1">Setup</a></li><li><a href="#2">1. The measured target (from Part 1, not re-typed)</a></li><li><a href="#3">2. What the simulator does</a></li><li><a href="#4">3. Validation suite</a></li><li><a href="#5">4. Mechanism comparison</a></li><li><a href="#6">5. Handoff to Part 3</a></li><li><a href="#7">6. Conclusions and limits</a></li></ul></div><h2 id="1">Setup</h2><pre class="codeinput">root = fileparts(fileparts(mfilename(<span class="string">'fullpath'</span>)));
+addpath(root);
+addpath(fullfile(root, <span class="string">'config'</span>));
+addpath(fullfile(root, <span class="string">'scripts'</span>));
+addpath(fullfile(root, <span class="string">'tests'</span>));
+p1 = fullfile(fileparts(root), <span class="string">'Part1'</span>);
+addpath(p1);
+addpath(fullfile(p1, <span class="string">'config'</span>));
+addpath(fullfile(p1, <span class="string">'tests'</span>));
+
+cfg = sim_config();
+</pre><h2 id="2">1. The measured target (from Part 1, not re-typed)</h2><p>The calibration target is loaded directly from Part 1's JSON so the numbers cannot drift. The signature the simulation must explain:</p><pre class="codeinput">targets = jsondecode(fileread(fullfile(p1, <span class="string">'results'</span>, <span class="string">'calibration_targets_otsu.json'</span>)));
+prim = {<span class="string">'compactness'</span>, <span class="string">'solidity'</span>, <span class="string">'convexity'</span>};
+<span class="keyword">for</span> d = prim
+    nm = d{1};
+    ben = targets.descriptors.(nm).benign.median;
+    inv = targets.descriptors.(nm).invasive.median;
+    fprintf(<span class="string">'%-12s  benign %.3f  -&gt;  invasive %.3f  (%s)\n'</span>, <span class="keyword">...</span>
+        nm, ben, inv, direction_word(nm, ben, inv));
+<span class="keyword">end</span>
+fprintf(<span class="string">'%-12s  benign %.4f  -&gt;  invasive %.4f  (near-constant: D_f is secondary)\n'</span>, <span class="keyword">...</span>
+    <span class="string">'Df'</span>, targets.descriptors.Df.benign.median, targets.descriptors.Df.invasive.median);
+</pre><h2 id="3">2. What the simulator does</h2><p>A hybrid CA (Anderson 2005): discrete cells on an N x N lattice coupled to a continuous reaction-diffusion nutrient field solved to steady state on a coarse grid (sparse direct solve, not explicit relaxation). Rules:</p><div><ul><li><b>Proliferation</b> gated by maturity (T_cell, fixed), empty neighbour,   contact inhibition beta, and local nutrient.</li><li><b>Migration</b> gated by adhesion A_i, with an optional chemotactic bias chi.</li><li><b>Apoptosis</b>: basal Poisson deaths plus starvation necrosis.</li></ul></div><p><b>Lattice isotropy</b> is the named risk in the design document. Moore connectivity with diagonal hops down-weighted by 1/sqrt(2) restores isotropy; TestIsotropy asserts the residual 4-fold Fourier harmonic is small and the resulting cluster is circular.</p><p><b>Identifiability:</b> alpha and T_cell both set the effective division rate, so T_cell is fixed here; beta gates division while A_i gates migration so the two "neighbour-count" knobs do not collapse into one.</p><pre class="codeinput">disp(phen.provenance_table());
+</pre><pre class="codeoutput">    parameter                                             provenance                                        
+    __________    __________________________________________________________________________________________
+
+    {'alpha' }    {'Framework: Anderson 2005 (division as a rate). Numeric value TBD.'                     }
+    {'beta'  }    {'Framework: Anderson 2005 contact-inhibition concept. Numeric value TBD.'               }
+    {'P_move'}    {'Framework: Anderson 2005 / Drasdo &amp; Hohme 2005 migration. Value TBD.'                  }
+    {'A_i'   }    {'Anderson 2005 adhesion threshold. Value TBD.'                                          }
+    {'T_cell'}    {'Fixed in Part 2 to remove alpha/T_cell non-identifiability. TBD (order 1 day in vivo).'}
+    {'delta' }    {'TBD (apoptosis rate).'                                                                 }
+    {'L'     }    {'TBD: diffusion length, order 100-200 um in tissue; swept as L in arm B.'               }
+    {'C0'    }    {'Normalised far-field nutrient; dimensionless by construction.'                         }
+    {'C_min' }    {'TBD: hypoxic threshold.'                                                               }
+    {'C_q'   }    {'TBD: quiescence threshold.'                                                            }
+
+</pre><h2 id="4">3. Validation suite</h2><p>Mirrors Part 1: synthetic geometry and analytic checks before any sweep is trusted. The two load-bearing tests are TestIsotropy (the lattice must not imprint an artefact) and TestBridge (the measurement bridge must still agree with Part 1's own clean-disk expectation).</p><pre class="codeinput">results = run_tests();
+passed = nnz([results.Passed]);
+failed = nnz([results.Failed]);
+fprintf(<span class="string">'\n%d/%d tests passed.\n'</span>, passed, numel(results));
+<span class="keyword">if</span> failed &gt; 0
+    error(<span class="string">'Validation suite failed; fix before interpreting any sweep.'</span>);
+<span class="keyword">end</span>
+</pre><pre class="codeoutput">&#27491;&#22312;&#36816;&#34892; TestBridge
+...
+&#24050;&#23436;&#25104; TestBridge
+__________
+
+&#27491;&#22312;&#36816;&#34892; TestCA
+...
+&#24050;&#23436;&#25104; TestCA
+__________
+
+&#27491;&#22312;&#36816;&#34892; TestIsotropy
+.
+&#24050;&#23436;&#25104; TestIsotropy
+__________
+
+&#27491;&#22312;&#36816;&#34892; TestNutrient
+..
+&#24050;&#23436;&#25104; TestNutrient
+__________
+
+ 
+                             Name                             Passed    Failed    Incomplete    Duration      Details   
+    ______________________________________________________    ______    ______    __________    ________    ____________
+
+    {'TestBridge/testDiskRegression'                     }    true      false       false         1.3864    {1x1 struct}
+    {'TestBridge/testSatelliteIsStrippedAndReported'     }    true      false       false        0.12712    {1x1 struct}
+    {'TestBridge/testNecroticHoleIsRecorded'             }    true      false       false         0.1167    {1x1 struct}
+    {'TestCA/testCellCountConservation'                  }    true      false       false        0.80224    {1x1 struct}
+    {'TestCA/testGrowthIsMonotonic'                      }    true      false       false        0.14297    {1x1 struct}
+    {'TestCA/testDeterminism'                            }    true      false       false        0.11852    {1x1 struct}
+    {'TestIsotropy/testProliferationIsIsotropic'         }    true      false       false        0.91987    {1x1 struct}
+    {'TestNutrient/testNoConsumptionIsUniform'           }    true      false       false         0.4379    {1x1 struct}
+    {'TestNutrient/testUniformConsumptionDepressesCenter'}    true      false       false       0.058844    {1x1 struct}
+
+
+9 passed, 0 failed, 0 incomplete (4.1 s)
+
+9/9 tests passed.
+</pre><h2 id="5">4. Mechanism comparison</h2><p>Four arms, each holding one mechanism fixed at benign and sweeping its parameter toward malignant, every other parameter fixed at the benign base. Each mask is measured clean and degraded; the primary reading is the between-level DELTA, because the clean CA baseline does not sit on the real benign point (Eden roughness vs real large-scale irregularity plus segmentation noise). NOTE the nutrient arm sweeps L from short (20, strong fingering, the aggressive end) to long (600, uniform, the benign end), so its "malignant" end is level 1 -- opposite the other three arms.</p><pre class="codeinput">csvPath = fullfile(cfg.paths.results, <span class="string">'mechanism_trajectories.csv'</span>);
+<span class="keyword">if</span> ~isfile(csvPath)
+    fprintf(<span class="string">'Run scripts/mechanism_comparison.m first to generate %s\n'</span>, csvPath);
+<span class="keyword">else</span>
+    T = readtable(csvPath, <span class="string">'TextType'</span>, <span class="string">'string'</span>);
+    armNames = categories(categorical(T.arm));
+
+    fprintf(<span class="string">'\nPer-arm trajectory (median over seeds; clean descriptors):\n'</span>);
+    <span class="keyword">for</span> a = 1:numel(armNames)
+        nm = armNames{a};
+        sub = T(T.arm == nm, :);
+        nRej = sum(sub.accepted == 0);
+        fprintf(<span class="string">'\n  %-20s  %d runs (%d rejected by QC)\n'</span>, nm, height(sub), nRej);
+        fprintf(<span class="string">'    %-6s %10s %10s %10s %10s\n'</span>, <span class="string">'level'</span>, <span class="string">'compact.'</span>, <span class="string">'solidity'</span>, <span class="string">'convexity'</span>, <span class="string">'Df'</span>);
+        <span class="keyword">for</span> lv = unique(sub.level)'
+            r = sub(sub.level == lv, :);
+            <span class="keyword">if</span> all(r.accepted == 0)
+                fprintf(<span class="string">'    %-6d %10s %10s %10s %10s  &lt;-- rejected (necrotic core)\n'</span>, lv, <span class="string">'-'</span>, <span class="string">'-'</span>, <span class="string">'-'</span>, <span class="string">'-'</span>);
+                <span class="keyword">continue</span>;
+            <span class="keyword">end</span>
+            r = r(r.accepted == 1, :);
+            fprintf(<span class="string">'    %-6d %10.3f %10.3f %10.3f %10.4f\n'</span>, lv, <span class="keyword">...</span>
+                median(r.clean_compactness), median(r.clean_solidity), <span class="keyword">...</span>
+                median(r.clean_convexity), median(r.clean_Df));
+        <span class="keyword">end</span>
+    <span class="keyword">end</span>
+
+    fprintf(<span class="string">'\nStripped-area fraction (migration phenotype the QC gate hides):\n'</span>);
+    <span class="keyword">for</span> a = 1:numel(armNames)
+        nm = armNames{a};
+        sub = T(T.arm == nm, :);
+        fprintf(<span class="string">'  %-20s  max %.5f\n'</span>, nm, max(sub.strippedAreaFraction));
+    <span class="keyword">end</span>
+<span class="keyword">end</span>
+</pre><pre class="codeoutput">
+Per-arm trajectory (median over seeds; clean descriptors):
+
+  clonal_heterogeneity  15 runs (0 rejected by QC)
+    level    compact.   solidity  convexity         Df
+    1           1.024      0.977      0.994     1.0710
+    2           1.015      0.982      0.998     1.0556
+    3           1.013      0.983      0.998     1.0587
+    4           1.012      0.984      0.998     1.0509
+    5           1.014      0.983      0.998     1.0520
+
+  contact_inhibition    15 runs (0 rejected by QC)
+    level    compact.   solidity  convexity         Df
+    1           1.024      0.977      0.994     1.0710
+    2           1.013      0.983      0.998     1.0470
+    3           1.016      0.988      0.999     1.0340
+    4           1.022      0.989      0.999     1.0273
+    5           1.026      0.990      0.999     1.0321
+
+  enhanced_migration    15 runs (0 rejected by QC)
+    level    compact.   solidity  convexity         Df
+    1           1.024      0.977      0.994     1.0710
+    2           1.026      0.976      0.994     1.0764
+    3           1.027      0.977      0.993     1.0888
+    4           1.022      0.979      0.995     1.0840
+    5           1.017      0.980      0.996     1.0854
+
+  nutrient_fingering    15 runs (3 rejected by QC)
+    level    compact.   solidity  convexity         Df
+    1               -          -          -          -  &lt;-- rejected (necrotic core)
+    2           1.033      0.976      0.993     1.0684
+    3           1.017      0.979      0.996     1.0636
+    4           1.022      0.979      0.995     1.0674
+    5           1.022      0.979      0.995     1.0674
+
+Stripped-area fraction (migration phenotype the QC gate hides):
+  clonal_heterogeneity  max 0.00005
+  contact_inhibition    max 0.00005
+  enhanced_migration    max 0.00073
+  nutrient_fingering    max 0.09119
+</pre><h2 id="6">5. Handoff to Part 3</h2><p>Best per arm (closest in the 3 primary descriptors to the real melanoma median) plus the honest distance, written to part2_handoff.json.</p><pre class="codeinput">handoffPath = fullfile(cfg.paths.results, <span class="string">'part2_handoff.json'</span>);
+<span class="keyword">if</span> isfile(handoffPath)
+    disp(jsondecode(fileread(handoffPath)));
+<span class="keyword">else</span>
+    fprintf(<span class="string">'Run scripts/mechanism_comparison.m first to generate %s\n'</span>, handoffPath);
+<span class="keyword">end</span>
+</pre><pre class="codeoutput">                source: 'Part2 mechanism comparison'
+                     N: 1024
+        stopEqDiameter: 600
+             generated: '2026-08-27 20:15:22'
+    primaryDescriptors: {{3x1 cell}}
+         benignTargets: [1x1 struct]
+       melanomaTargets: [1x1 struct]
+                  best: [1x1 struct]
+
+</pre><h2 id="7">6. Conclusions and limits</h2><p>Four mechanisms were swept at production scale (1024^2, 5 levels x 3 seeds) and scored by the SAME pipeline that scored the real lesions. The result is a clean negative -- and the plan pre-registered that a negative result is itself a finding, not a licence to tune parameters until something fits.</p><div><ul><li><b>Contact-inhibition loss (beta -&gt; 0)</b> moves solidity UP (0.978 -&gt; 0.990)   and convexity UP (0.994 -&gt; 0.999): the OPPOSITE of malignant. Structurally   an empty-neighbour CA cannot express "push through neighbours" -- a   surrounded cell has no empty site to divide into -- so lowering beta only   lets every frontier cell divide uniformly, which heals gaps and smooths   the margin.</li><li><b>Clonal heterogeneity (advantaged subclone, frac -&gt; 0.4)</b> also smooths the   cluster (compactness 1.025 -&gt; 1.013, solidity 0.978 -&gt; 0.983). A faster   clone fills the interior and rounds the mass; it does not displace   neighbours into lobes.</li><li><b>Nutrient-driven fingering</b> moves in the CORRECT direction (shorter   diffusion length L -&gt; more irregular: compactness 1.021 -&gt; 1.033, solidity   0.979 -&gt; 0.976), but the amplitude is ~30x too small, and the strongest   endpoint L=20 is rejected outright (truncated_at_border): the necrotic   core (hole fraction 1.91) fragments the mask into ~8500 components and   imfill turns it into a blob touching the frame border. L&gt;=150 is a uniform   field -- no gradient, no fingering.</li><li><b>Enhanced migration</b> changes no descriptor (compactness 1.024 -&gt; 1.017,   solidity 0.977 -&gt; 0.980). Its phenotype -- satellite detachment -- raises   the stripped-area fraction ~13x but stays two orders of magnitude below   the 1% strip threshold, so the QC gate erases it before scoring.</li></ul></div><p>Conclusion: no arm's trajectory crosses the real benign and melanoma regions. The measured malignant signature (solidity 0.85, convexity 0.84, compactness 1.81 at near-constant Df) is "a few large lobes", whereas an empty-neighbour lattice CA -- however its four knobs are swept -- yields near-circular Eden clusters, not large-scale lobulation. Reproducing the signature will require a mechanism that displaces neighbours (off-lattice / mechanical) or imposes long-range spatial heterogeneity; that is the concrete, negative input handed to Part 3, not a parameter Part 2 could have found.</p><p>Limits carried into the handoff: (i) clean CA masks carry no segmentation noise, so absolute values differ from the real Otsu medians and the primary reading is the between-level delta; (ii) migration satellites and necrotic cores are erased by QC, so the bridge reports them separately; (iii) lattice isotropy is asserted by TestIsotropy, not assumed.</p><pre class="codeinput"><span class="comment">% -------------------------------------------------------------------------</span>
+<span class="keyword">function</span> w = direction_word(nm, ben, inv)
+<span class="keyword">if</span> inv &gt; ben, w = <span class="string">'increases'</span>; <span class="keyword">else</span>, w = <span class="string">'decreases'</span>; <span class="keyword">end</span>
+<span class="keyword">end</span>
+</pre><pre class="codeoutput">compactness   benign 1.351  -&gt;  invasive 1.810  (increases)
+solidity      benign 0.910  -&gt;  invasive 0.853  (decreases)
+convexity     benign 0.936  -&gt;  invasive 0.839  (decreases)
+Df            benign 1.0400  -&gt;  invasive 1.0479  (near-constant: D_f is secondary)
+</pre><p class="footer"><br><a href="https://www.mathworks.com/products/matlab/">Published with MATLAB&reg; R2023a</a><br></p></div><!--
+##### SOURCE BEGIN #####
+%% Part 2 — Cell-dynamics simulation core
+% *A hybrid cellular automaton plus reaction-diffusion nutrient field, scored
+% by the same morphological pipeline as Part 1, to test which cell-scale
+% mechanism reproduces the measured malignant signature.*
+%
+% Publish with
+%
+%   publish('scripts/report.m', struct('format','html','outputDir','results/report'))
+%
+% The scientific question here is not "can we grow a tumour?" but "which of
+% four mechanisms REPLACE_WITH_DASH_DASH loss of contact inhibition, nutrient-driven fingering,
+% enhanced migration, or clonal heterogeneity REPLACE_WITH_DASH_DASH moves the shape from the
+% benign to the melanoma region of descriptor space, and can any of them?"
+% Part 1 measured that the malignant signature is LOW solidity, LOW convexity
+% and HIGH compactness at near-constant D_f: a few large lobes, not fine
+% fractal fringe.
+
+%% Setup
+root = fileparts(fileparts(mfilename('fullpath')));
+addpath(root);
+addpath(fullfile(root, 'config'));
+addpath(fullfile(root, 'scripts'));
+addpath(fullfile(root, 'tests'));
+p1 = fullfile(fileparts(root), 'Part1');
+addpath(p1);
+addpath(fullfile(p1, 'config'));
+addpath(fullfile(p1, 'tests'));
+
+cfg = sim_config();
+
+%% 1. The measured target (from Part 1, not re-typed)
+% The calibration target is loaded directly from Part 1's JSON so the numbers
+% cannot drift. The signature the simulation must explain:
+
+targets = jsondecode(fileread(fullfile(p1, 'results', 'calibration_targets_otsu.json')));
+prim = {'compactness', 'solidity', 'convexity'};
+for d = prim
+    nm = d{1};
+    ben = targets.descriptors.(nm).benign.median;
+    inv = targets.descriptors.(nm).invasive.median;
+    fprintf('%-12s  benign %.3f  ->  invasive %.3f  (%s)\n', ...
+        nm, ben, inv, direction_word(nm, ben, inv));
+end
+fprintf('%-12s  benign %.4f  ->  invasive %.4f  (near-constant: D_f is secondary)\n', ...
+    'Df', targets.descriptors.Df.benign.median, targets.descriptors.Df.invasive.median);
+
+%% 2. What the simulator does
+% A hybrid CA (Anderson 2005): discrete cells on an N x N lattice coupled to a
+% continuous reaction-diffusion nutrient field solved to steady state on a
+% coarse grid (sparse direct solve, not explicit relaxation). Rules:
+%
+% * *Proliferation* gated by maturity (T_cell, fixed), empty neighbour,
+%   contact inhibition beta, and local nutrient.
+% * *Migration* gated by adhesion A_i, with an optional chemotactic bias chi.
+% * *Apoptosis*: basal Poisson deaths plus starvation necrosis.
+%
+% *Lattice isotropy* is the named risk in the design document. Moore
+% connectivity with diagonal hops down-weighted by 1/sqrt(2) restores
+% isotropy; TestIsotropy asserts the residual 4-fold Fourier harmonic is
+% small and the resulting cluster is circular.
+%
+% *Identifiability:* alpha and T_cell both set the effective division rate, so
+% T_cell is fixed here; beta gates division while A_i gates migration so the
+% two "neighbour-count" knobs do not collapse into one.
+
+disp(phen.provenance_table());
+
+%% 3. Validation suite
+% Mirrors Part 1: synthetic geometry and analytic checks before any sweep is
+% trusted. The two load-bearing tests are TestIsotropy (the lattice must not
+% imprint an artefact) and TestBridge (the measurement bridge must still agree
+% with Part 1's own clean-disk expectation).
+
+results = run_tests();
+passed = nnz([results.Passed]);
+failed = nnz([results.Failed]);
+fprintf('\n%d/%d tests passed.\n', passed, numel(results));
+if failed > 0
+    error('Validation suite failed; fix before interpreting any sweep.');
+end
+
+%% 4. Mechanism comparison
+% Four arms, each holding one mechanism fixed at benign and sweeping its
+% parameter toward malignant, every other parameter fixed at the benign base.
+% Each mask is measured clean and degraded; the primary reading is the
+% between-level DELTA, because the clean CA baseline does not sit on the real
+% benign point (Eden roughness vs real large-scale irregularity plus
+% segmentation noise). NOTE the nutrient arm sweeps L from short (20, strong
+% fingering, the aggressive end) to long (600, uniform, the benign end), so its
+% "malignant" end is level 1 REPLACE_WITH_DASH_DASH opposite the other three arms.
+
+csvPath = fullfile(cfg.paths.results, 'mechanism_trajectories.csv');
+if ~isfile(csvPath)
+    fprintf('Run scripts/mechanism_comparison.m first to generate %s\n', csvPath);
+else
+    T = readtable(csvPath, 'TextType', 'string');
+    armNames = categories(categorical(T.arm));
+
+    fprintf('\nPer-arm trajectory (median over seeds; clean descriptors):\n');
+    for a = 1:numel(armNames)
+        nm = armNames{a};
+        sub = T(T.arm == nm, :);
+        nRej = sum(sub.accepted == 0);
+        fprintf('\n  %-20s  %d runs (%d rejected by QC)\n', nm, height(sub), nRej);
+        fprintf('    %-6s %10s %10s %10s %10s\n', 'level', 'compact.', 'solidity', 'convexity', 'Df');
+        for lv = unique(sub.level)'
+            r = sub(sub.level == lv, :);
+            if all(r.accepted == 0)
+                fprintf('    %-6d %10s %10s %10s %10s  <REPLACE_WITH_DASH_DASH rejected (necrotic core)\n', lv, '-', '-', '-', '-');
+                continue;
+            end
+            r = r(r.accepted == 1, :);
+            fprintf('    %-6d %10.3f %10.3f %10.3f %10.4f\n', lv, ...
+                median(r.clean_compactness), median(r.clean_solidity), ...
+                median(r.clean_convexity), median(r.clean_Df));
+        end
+    end
+
+    fprintf('\nStripped-area fraction (migration phenotype the QC gate hides):\n');
+    for a = 1:numel(armNames)
+        nm = armNames{a};
+        sub = T(T.arm == nm, :);
+        fprintf('  %-20s  max %.5f\n', nm, max(sub.strippedAreaFraction));
+    end
+end
+
+%% 5. Handoff to Part 3
+% Best per arm (closest in the 3 primary descriptors to the real melanoma
+% median) plus the honest distance, written to part2_handoff.json.
+
+handoffPath = fullfile(cfg.paths.results, 'part2_handoff.json');
+if isfile(handoffPath)
+    disp(jsondecode(fileread(handoffPath)));
+else
+    fprintf('Run scripts/mechanism_comparison.m first to generate %s\n', handoffPath);
+end
+
+%% 6. Conclusions and limits
+% Four mechanisms were swept at production scale (1024^2, 5 levels x 3 seeds)
+% and scored by the SAME pipeline that scored the real lesions. The result is
+% a clean negative REPLACE_WITH_DASH_DASH and the plan pre-registered that a negative result is
+% itself a finding, not a licence to tune parameters until something fits.
+%
+% * *Contact-inhibition loss (beta -> 0)* moves solidity UP (0.978 -> 0.990)
+%   and convexity UP (0.994 -> 0.999): the OPPOSITE of malignant. Structurally
+%   an empty-neighbour CA cannot express "push through neighbours" REPLACE_WITH_DASH_DASH a
+%   surrounded cell has no empty site to divide into REPLACE_WITH_DASH_DASH so lowering beta only
+%   lets every frontier cell divide uniformly, which heals gaps and smooths
+%   the margin.
+% * *Clonal heterogeneity (advantaged subclone, frac -> 0.4)* also smooths the
+%   cluster (compactness 1.025 -> 1.013, solidity 0.978 -> 0.983). A faster
+%   clone fills the interior and rounds the mass; it does not displace
+%   neighbours into lobes.
+% * *Nutrient-driven fingering* moves in the CORRECT direction (shorter
+%   diffusion length L -> more irregular: compactness 1.021 -> 1.033, solidity
+%   0.979 -> 0.976), but the amplitude is ~30x too small, and the strongest
+%   endpoint L=20 is rejected outright (truncated_at_border): the necrotic
+%   core (hole fraction 1.91) fragments the mask into ~8500 components and
+%   imfill turns it into a blob touching the frame border. L>=150 is a uniform
+%   field REPLACE_WITH_DASH_DASH no gradient, no fingering.
+% * *Enhanced migration* changes no descriptor (compactness 1.024 -> 1.017,
+%   solidity 0.977 -> 0.980). Its phenotype REPLACE_WITH_DASH_DASH satellite detachment REPLACE_WITH_DASH_DASH raises
+%   the stripped-area fraction ~13x but stays two orders of magnitude below
+%   the 1% strip threshold, so the QC gate erases it before scoring.
+%
+% Conclusion: no arm's trajectory crosses the real benign and melanoma
+% regions. The measured malignant signature (solidity 0.85, convexity 0.84,
+% compactness 1.81 at near-constant Df) is "a few large lobes", whereas an
+% empty-neighbour lattice CA REPLACE_WITH_DASH_DASH however its four knobs are swept REPLACE_WITH_DASH_DASH yields
+% near-circular Eden clusters, not large-scale lobulation. Reproducing the
+% signature will require a mechanism that displaces neighbours (off-lattice /
+% mechanical) or imposes long-range spatial heterogeneity; that is the
+% concrete, negative input handed to Part 3, not a parameter Part 2 could have
+% found.
+%
+% Limits carried into the handoff: (i) clean CA masks carry no segmentation
+% noise, so absolute values differ from the real Otsu medians and the primary
+% reading is the between-level delta; (ii) migration satellites and necrotic
+% cores are erased by QC, so the bridge reports them separately; (iii) lattice
+% isotropy is asserted by TestIsotropy, not assumed.
+
+% REPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASH-
+function w = direction_word(nm, ben, inv)
+if inv > ben, w = 'increases'; else, w = 'decreases'; end
+end
+
+##### SOURCE END #####
+--></body></html>
